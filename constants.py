@@ -1,0 +1,17 @@
+HEIGHT = 1000
+WIDTH = 1000
+RECT_SIZE = 50
+STEP = 50
+FPS = 15
+SCORE_STEP = 10
+
+white = (255, 255, 255)
+black = (0, 0, 0)
+red = (255, 0, 0)
+
+UP = 0
+DOWN = 1
+LEFT = 2
+RIGHT = 3
+
+BASE = 50
