@@ -1,6 +1,6 @@
 import abc
 from abc import ABC
-
+import time
 import tensorflow as tf
 import random
 import pygame
@@ -18,11 +18,11 @@ from tf_agents.specs import ArraySpec, BoundedArraySpec, TensorSpec, BoundedTens
 class SnakeGameEnv(py_environment.PyEnvironment, ABC):
 
     def __init__(self, display, font):
-        #super().__init__()
+        super().__init__()
         self._action_spec = array_spec.BoundedArraySpec(
-            shape=(), dtype=np.int32, minimum=0, maximum=1, name='action')
-        self._observation_spec = array_spec.BoundedArraySpec(
-            shape=(12,), dtype=np.int32, minimum=0, name='observation')
+            shape=(), dtype=np.int32, minimum=0, maximum=3, name='action')
+        self._observation_spec = BoundedArraySpec(
+            shape=(12,), dtype=np.int32, minimum=0, maximum=1, name='observation')
 
         self.score = 0
         self.food_x, self.food_y = choose_new_apple()
@@ -31,6 +31,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.snake_agent = SnakeAgent()
         self.display = display
         self.font = font
+        self.steps = 0
 
     def action_spec(self):
         return self._action_spec
@@ -48,6 +49,10 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         return ts.restart(np.array(obs, dtype=np.int32))
 
     def _step(self, action):
+
+        if self.steps > 200:
+            obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
+            return ts.termination(np.array(obs, dtype=np.int32), 0)
 
         move = action
         if move == UP:
@@ -73,12 +78,14 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.s.y += y_step
 
         if self.s.is_collision():
+            print(f'S collided with wall')
             return self.reset()
 
         got_food = False
 
         if self.s.did_get_food(self.food_x, self.food_y):
             self.score += SCORE_STEP
+            self.steps = 0
             got_food = True
             self.food_x, self.food_y = choose_new_apple()
             self.s.insert_segment(
@@ -94,7 +101,8 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.display.blit(self.font.render(f'Score {self.score}', True, black), (0, 0))
         pygame.display.update()
         obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
-        print(f'Right before returning from transition. This is current observation {obs}')
+        #time.sleep(0.5)
+        self.steps += 1
         return ts.transition(np.array(obs, dtype=np.int32), 10 if got_food else 0, 0)
 
 
@@ -107,3 +115,47 @@ def choose_new_apple() -> (int, int):
            BASE * round(random.randint(0, HEIGHT - RECT_SIZE)) / BASE
 
 
+
+class CardGameEnv(py_environment.PyEnvironment):
+
+  def __init__(self):
+    self._action_spec = array_spec.BoundedArraySpec(
+        shape=(), dtype=np.int32, minimum=0, maximum=1, name='action')
+    self._observation_spec = array_spec.BoundedArraySpec(
+        shape=(1,), dtype=np.int32, minimum=0, name='observation')
+    self._state = 0
+    self._episode_ended = False
+
+  def action_spec(self):
+    return self._action_spec
+
+  def observation_spec(self):
+    return self._observation_spec
+
+  def _reset(self):
+    self._state = 0
+    self._episode_ended = False
+    return ts.restart(np.array([self._state], dtype=np.int32))
+
+  def _step(self, action):
+
+    if self._episode_ended:
+      # The last action ended the episode. Ignore the current action and start
+      # a new episode.
+      return self.reset()
+
+    # Make sure episodes don't go on forever.
+    if action == 1:
+      self._episode_ended = True
+    elif action == 0:
+      new_card = np.random.randint(1, 11)
+      self._state += new_card
+    else:
+      raise ValueError('`action` should be 0 or 1.')
+
+    if self._episode_ended or self._state >= 21:
+      reward = self._state - 21 if self._state <= 21 else -21
+      return ts.termination(np.array([self._state], dtype=np.int32), reward)
+    else:
+      return ts.transition(
+          np.array([self._state], dtype=np.int32), reward=0.0, discount=1.0)

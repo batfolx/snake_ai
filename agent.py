@@ -29,27 +29,20 @@ class SnakeAgent:
     def set_dqn_agent(self, a):
         self.agent = a
 
-    def get_time_step(self, snake: Snake, food_x, food_y, first):
-        # array of ints of size 12
-        obs = self.get_observation(snake, food_x, food_y)
-        obs_spec = BoundedArraySpec(shape=(12,),
-                                    dtype=np.float32,
-                                    name="observation",
-                                    minimum=obs,
-                                    maximum=obs
+    def get_time_step(self):
+        obs_spec = TensorSpec(shape=(12,),
+                              dtype=np.int32,
+                              name="observation",
+
                               )
 
         # scalar float value
-        reward_spec = ArraySpec(shape=(), dtype=np.float32, name='reward')
+        reward_spec = TensorSpec((1,), np.dtype('float32'), 'reward')
 
         # scalar integer with 4 possible values (up, down, left, right)
-        action_spec = BoundedArraySpec(shape=(1,), dtype=np.int64, name='action', minimum=0, maximum=3)
-        if first:
-            step_type = StepType.FIRST
-        else:
-            step_type = StepType.MID
-        timestep = TimeStep(step_type=step_type, observation=obs_spec, reward=reward_spec, discount=0)
-        #timestep = time_step_spec(obs_spec)
+        action_spec = BoundedTensorSpec((1,), np.dtype('int32'), minimum=0, maximum=3, name='action')
+        #timestep = TimeStep(step_type=step_type, observation=obs_spec, reward=reward_spec, discount=0)
+        timestep = time_step_spec(obs_spec)
         self.time_step_spec = timestep
         print('Observation spec:')
         print(obs_spec)
