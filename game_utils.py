@@ -35,6 +35,12 @@ class Snake:
     def pop_segment(self):
         self.segments.pop()
 
+    def reset_snake(self):
+        self.direc = RIGHT
+        self.x = WIDTH // 2
+        self.y = WIDTH // 2
+        self.segments.clear()
+
     def is_collision(self) -> bool:
         """
         Checks for a collision with the snake with the wall, and with itself
@@ -45,7 +51,7 @@ class Snake:
                     and seg.rect[1] - RECT_SIZE < self.y < seg.rect[1] + RECT_SIZE and i != 0:
                 return True
 
-        if self.x > (self.max_x - RECT_SIZE) or self.max_x < 0:
+        if self.x > (self.max_x - RECT_SIZE) or self.x < 0:
             return True
 
         if self.y > self.max_y or self.y < 0 - RECT_SIZE:

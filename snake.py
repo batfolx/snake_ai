@@ -21,9 +21,13 @@ from tf_agents.networks import categorical_q_network
 from tf_agents.trajectories import trajectory
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.environments import tf_py_environment
-
+import numpy as np
 from tf_agents.environments import utils
+import matplotlib.pyplot as plt
 from snake_env import SnakeGameEnv, CardGameEnv
+import IPython
+import base64
+import imageio
 
 
 def game(display, agent: SnakeAgent):
@@ -133,7 +137,7 @@ def setup():
     # game(display, snake_agent)
 
     env = SnakeGameEnv(display, font)
-    # env = CardGameEnv()
+    #env = CardGameEnv()
     # utils.validate_py_environment(env)
     fc_layer_params = (100, 50)
     action_tensor_spec = tensor_spec.from_spec(env.action_spec())
@@ -161,6 +165,9 @@ def setup():
         td_errors_loss_fn=common.element_wise_squared_loss,
         train_step_counter=train_step_counter)
     agent.initialize()
+    eval_policy = agent.policy
+    collect_policy = agent.collect_policy
+    print('Initialized Agent')
     random_policy = random_tf_policy.RandomTFPolicy(env.time_step_spec(),
                                                     env.action_spec())
     time_step = env.reset()
@@ -171,32 +178,28 @@ def setup():
         batch_size=env.batch_size,
         max_length=REPLAY_BUFFER_MAX_LEN)
 
+    print('Collecting data')
     collect_data(env, random_policy, replay_buffer, INITIAL_COLLECT_STEPS)
     dataset = replay_buffer.as_dataset(
         num_parallel_calls=3,
         sample_batch_size=BATCH_SIZE,
         num_steps=2).prefetch(3)
-
+    print('Collecting data complete')
     iterator = iter(dataset)
     print(iterator)
     # Reset the train step
     agent.train_step_counter.assign(0)
-
-    # Evaluate the agent's policy once before training.
     avg_return = compute_avg_return(env, agent.policy, NUM_EVAL_EPISODES)
     returns = [avg_return]
-
-    for _ in range(NUM_ITERATIONS):
-
-        # Collect a few steps using collect_policy and save to the replay buffer.
+    print('Beginning to train...')
+    for i in range(NUM_ITERATIONS):
         collect_data(env, agent.collect_policy, replay_buffer, COLLECT_STEPS_PER_ITERATION)
 
-        # Sample a batch of data from the buffer and update the agent's network.
         experience, unused_info = next(iterator)
         train_loss = agent.train(experience).loss
-
         step = agent.train_step_counter.numpy()
 
+        print(f"Training agent through iteration {(i / NUM_ITERATIONS) * 100:.2f}%...")
         if step % LOG_INTERVAL == 0:
             print('step = {0}: loss = {1}'.format(step, train_loss))
 
@@ -204,6 +207,7 @@ def setup():
             avg_return = compute_avg_return(env, agent.policy, NUM_EVAL_EPISODES)
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
             returns.append(avg_return)
+
 
 
 def compute_avg_return(environment, policy, num_episodes=10):
@@ -236,6 +240,32 @@ def collect_step(environment, policy, buffer):
 def collect_data(env, policy, buffer, steps):
     for _ in range(steps):
         collect_step(env, policy, buffer)
+
+
+def embed_mp4(filename):
+    """Embeds an mp4 file in the notebook."""
+    video = open(filename, 'rb').read()
+    b64 = base64.b64encode(video)
+    tag = '''
+  <video width="640" height="480" controls>
+    <source src="data:video/mp4;base64,{0}" type="video/mp4">
+  Your browser does not support the video tag.
+  </video>'''.format(b64.decode())
+
+    return IPython.display.HTML(tag)
+
+def create_policy_eval_video(policy, filename, env, num_episodes=5, fps=30):
+    filename = filename + ".mp4"
+    with imageio.get_writer(filename, fps=fps) as video:
+        for _ in range(num_episodes):
+            time_step = env.reset()
+            video.append_data(env.render())
+            while not time_step.is_last():
+                action_step = policy.action(time_step)
+                time_step = env.step(action_step.action)
+                video.append_data(env.render())
+    return embed_mp4(filename)
+
 
 
 setup()

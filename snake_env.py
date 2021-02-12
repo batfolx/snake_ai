@@ -12,7 +12,7 @@ import numpy as np
 from tf_agents.environments import py_environment
 from tf_agents.specs import array_spec
 from tf_agents.trajectories import time_step as ts
-from tf_agents.specs import ArraySpec, BoundedArraySpec, TensorSpec, BoundedTensorSpec
+from tf_agents.specs import BoundedArraySpec
 
 
 class SnakeGameEnv(py_environment.PyEnvironment, ABC):
@@ -41,9 +41,10 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
 
     def _reset(self):
         self.score = 0
-        self.s.segments.clear()
+        self.s.reset_snake()
         self.s.segments.insert(0, Rectangle(self.display, black, [self.s.x, self.s.y, RECT_SIZE, RECT_SIZE]))
-        self.snake_agent = SnakeAgent()
+        self.food_x, self.food_y = choose_new_apple()
+        self.steps = 0
         obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
 
         return ts.restart(np.array(obs, dtype=np.int32))
@@ -52,7 +53,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
 
         if self.steps > 200:
             obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
-            return ts.termination(np.array(obs, dtype=np.int32), 0)
+            return ts.termination(np.array(obs, dtype=np.int32), -10)
 
         move = action
         if move == UP:
@@ -78,7 +79,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.s.y += y_step
 
         if self.s.is_collision():
-            print(f'S collided with wall')
+            #print(f'S collided with wall, resetting')
             return self.reset()
 
         got_food = False
@@ -103,7 +104,9 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
         #time.sleep(0.5)
         self.steps += 1
-        return ts.transition(np.array(obs, dtype=np.int32), 10 if got_food else 0, 0)
+        #print(f'Went through step with step number {self.steps}, with observation {obs}')
+        #time.sleep(0.025)
+        return ts.transition(np.array(obs, dtype=np.int32), 10 if got_food else -1, 1)
 
 
 def choose_new_apple() -> (int, int):
@@ -113,8 +116,6 @@ def choose_new_apple() -> (int, int):
     """
     return BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE), \
            BASE * round(random.randint(0, HEIGHT - RECT_SIZE)) / BASE
-
-
 
 class CardGameEnv(py_environment.PyEnvironment):
 
