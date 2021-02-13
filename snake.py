@@ -137,12 +137,14 @@ def setup():
     # game(display, snake_agent)
 
     train_env = SnakeGameEnv(display, font)
+    eval_env = SnakeGameEnv(display, font)
     # env = CardGameEnv()
     # utils.validate_py_environment(env)
     fc_layer_params = (100, 50)
     action_tensor_spec = tensor_spec.from_spec(train_env.action_spec())
     num_actions = action_tensor_spec.maximum - action_tensor_spec.minimum + 1
     train_env = tf_py_environment.TFPyEnvironment(train_env)
+    eval_env = tf_py_environment.TFPyEnvironment(eval_env)
 
     # QNetwork consists of a sequence of Dense layers followed by a dense layer
     # with `num_actions` units to generate one q_value per available action as
@@ -207,6 +209,7 @@ def setup():
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
             returns.append(avg_return)
 
+    pygame.quit()
     iterations = range(0, NUM_ITERATIONS + 1, EVAL_INTERVAL)
     plt.plot(iterations, returns)
     plt.ylabel('Average Return')

@@ -81,9 +81,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.s.y += y_step
 
         if self.s.is_collision():
-            obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
-            return ts.termination(np.array(obs, dtype=np.int32), -100)
-            #return self.reset()
+            return self.reset()
 
         got_food = False
 
