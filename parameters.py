@@ -1,4 +1,4 @@
-NUM_ITERATIONS = 500  # @param {type:"integer"}
+NUM_ITERATIONS = 15000  # @param {type:"integer"}
 INITIAL_COLLECT_STEPS = 100  # @param {type:"integer"}
 COLLECT_STEPS_PER_ITERATION = 1  # @param {type:"integer"}
 REPLAY_BUFFER_MAX_LEN = 100000  # @param {type:"integer"}

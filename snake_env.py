@@ -33,6 +33,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.font = font
         self.steps = 0
         self.game_number = 0
+        self.did_collide = False
 
     def action_spec(self):
         return self._action_spec
@@ -47,15 +48,15 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.food_x, self.food_y = choose_new_apple()
         self.steps = 0
         self.game_number += 1
+        self.did_collide = False
         obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
 
         return ts.restart(np.array(obs, dtype=np.int32))
 
     def _step(self, action):
 
-        if self.steps > 50:
-            obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
-            return ts.termination(np.array(obs, dtype=np.int32), -10)
+        if self.steps > 50 or self.did_collide:
+            return self.reset()
 
         move = action
         if move == UP:
@@ -81,7 +82,9 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.s.y += y_step
 
         if self.s.is_collision():
-            return self.reset()
+            obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
+            self.did_collide = True
+            return ts.termination(np.array(obs, dtype=np.int32), -10)
 
         got_food = False
 

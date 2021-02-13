@@ -215,6 +215,7 @@ def setup():
     plt.ylabel('Average Return')
     plt.xlabel('Iterations')
     plt.ylim(top=250)
+    plt.savefig("test.png")
     plt.show()
 
 
@@ -230,7 +231,7 @@ def compute_avg_return(environment, policy, num_episodes=10):
             action_step = policy.action(time_step)
             time_step = environment.step(action_step.action)
             episode_return += time_step.reward
-            print(f'Episode number {i} with step reward {time_step.reward}, totaling reward {episode_return}')
+            print(f'{time_step}')
         total_return += episode_return
 
     avg_return = total_return / num_episodes
