@@ -30,31 +30,25 @@ import base64
 import imageio
 
 
-def game(display, agent: SnakeAgent):
+def game(display):
     """
     Automated snake game using learning
     :param agent: The agent used for reinforcement learning
     :param display:
     :return:
     """
-
-    apple_x, apple_y = choose_new_apple()
     s = Snake()
     s.segments.insert(0, Rectangle(display, black, [s.x, s.y, RECT_SIZE, RECT_SIZE]))
+    apple_x, apple_y = choose_new_apple(s)
     score = 0
     font = pygame.font.SysFont("Times New Roman", 24)
-
-    # take one step to get the initial observation of the game
-    step = game_step(display, s, apple_x, apple_y, font, score)
-
-    # get the timestep and action spec for this particular environment of the game
-    timestep, action_spec = agent.get_time_step()
-    fc_layer_params = (100, 50)
-
+    agent = SnakeAgent()
+    step = True
     while step:
-        step = game_step(display, s, apple_x, apple_y, font, score)
-        print(agent.get_observation(s, apple_x, apple_y))
-        time.sleep(0.5)
+        step, apple_x, apple_y = game_step(display, s, apple_x, apple_y, font, score)
+        obs = agent.get_observation(s, apple_x, apple_y)
+        print(obs)
+        time.sleep(0.1)
 
     return score
 
@@ -75,31 +69,69 @@ def game_step(display,
     :param score: The score
     :return:
     """
-    move = random.randint(0, 3)
-    if move == UP:
-        x_step = 0
-        y_step = -STEP
-        s.change_direction(UP)
-    elif move == DOWN:
-        x_step = 0
-        y_step = STEP
-        s.change_direction(DOWN)
-    elif move == LEFT:
-        x_step = -STEP
-        y_step = 0
-        s.change_direction(LEFT)
-    else:  # move == RIGHT:
-        x_step = STEP
-        y_step = 0
-        s.change_direction(RIGHT)
+    curr_direction = s.direction()
+    x_step = -1
+    y_step = -1
 
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN:
+            # up key pressed
+            if event.key == pygame.K_UP:
+                if curr_direction != DOWN:
+                    x_step = 0
+                    y_step = -STEP
+                    s.change_direction(UP)
+                else:
+                    x_step = 0
+                    y_step = STEP
+            # down key pressed
+            if event.key == pygame.K_DOWN:
+                if curr_direction != UP:
+                    x_step = 0
+                    y_step = STEP
+                    s.change_direction(DOWN)
+                else:
+                    x_step = 0
+                    y_step = -STEP
+            # left key pressed
+            if event.key == pygame.K_LEFT:
+                if curr_direction != RIGHT:
+                    x_step = -STEP
+                    y_step = 0
+                    s.change_direction(LEFT)
+                else:
+                    x_step = STEP
+                    y_step = 0
+            # right key pressed
+            if event.key == pygame.K_RIGHT:
+                if curr_direction != LEFT:
+                    x_step = STEP
+                    y_step = 0
+                    s.change_direction(RIGHT)
+                else:
+                    x_step = -STEP
+                    y_step = 0
+
+    if x_step == -1 and y_step == -1:
+        if curr_direction == UP:
+            x_step = 0
+            y_step = -STEP
+        elif curr_direction == DOWN:
+            x_step = 0
+            y_step = STEP
+        elif curr_direction == RIGHT:
+            x_step = STEP
+            y_step = 0
+        else:
+            x_step = -STEP
+            y_step = 0
     # calculate the training inputs for the next move
 
     s.x += x_step
     s.y += y_step
 
     if s.is_collision():
-        return False
+        return False, apple_x, apple_y
 
     if s.did_get_food(apple_x, apple_y):
         score += SCORE_STEP
@@ -116,7 +148,7 @@ def game_step(display,
     display.blit(font.render(f'Score {score}', True, black), (0, 0))
     pygame.display.update()
 
-    return True
+    return True, apple_x, apple_y
 
 
 def choose_new_apple(snake: Snake) -> (int, int):
@@ -136,8 +168,7 @@ def choose_new_apple(snake: Snake) -> (int, int):
             return x, y
 
 
-
-def setup():
+def ai_game():
     pygame.init()
     display = pygame.display.set_mode((HEIGHT, WIDTH))
     pygame.display.set_caption("Snake")
@@ -208,14 +239,16 @@ def setup():
         experience, unused_info = next(iterator)
         train_loss = agent.train(experience).loss
         step = agent.train_step_counter.numpy()
+        print(train_env.time_step_spec())
 
-        print(f"Training agent through iteration {(i / NUM_ITERATIONS) * 100:.2f}%...")
+        #print(f"Training agent through iteration {(i / NUM_ITERATIONS) * 100:.2f}%...")
         if step % LOG_INTERVAL == 0:
-            print('step = {0}: loss = {1}'.format(step, train_loss))
+            pass
+            #print('step = {0}: loss = {1}'.format(step, train_loss))
 
         if step % EVAL_INTERVAL == 0:
             avg_return = compute_avg_return(train_env, agent.policy, NUM_EVAL_EPISODES)
-            print('step = {0}: Average Return = {1}'.format(step, avg_return))
+            #print('step = {0}: Average Return = {1}'.format(step, avg_return))
             returns.append(avg_return)
 
     pygame.quit()
@@ -288,5 +321,16 @@ def create_policy_eval_video(policy, filename, env, num_episodes=5, fps=30):
     return embed_mp4(filename)
 
 
-setup()
-pygame.quit()
+def manual_game():
+    pygame.init()
+    display = pygame.display.set_mode((HEIGHT, WIDTH))
+    pygame.display.set_caption("Snake")
+    font = pygame.font.SysFont("Times New Roman", 24)
+    game(display)
+
+def main():
+    #manual_game()
+    ai_game()
+    pygame.quit()
+
+main()

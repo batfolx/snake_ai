@@ -25,9 +25,10 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
             shape=(12,), dtype=np.int32, minimum=0, maximum=1, name='observation')
 
         self.score = 0
-        self.food_x, self.food_y = choose_new_apple()
         self.s = Snake()
         self.s.segments.insert(0, Rectangle(display, black, [self.s.x, self.s.y, RECT_SIZE, RECT_SIZE]))
+
+        self.food_x, self.food_y = choose_new_apple(self.s)
         self.snake_agent = SnakeAgent()
         self.display = display
         self.font = font
@@ -35,6 +36,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.high_score = 0
         self.game_number = 0
         self.did_collide = False
+        self.tot_steps = 250
 
     def action_spec(self):
         return self._action_spec
@@ -46,7 +48,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.score = 0
         self.s.reset_snake()
         self.s.segments.insert(0, Rectangle(self.display, black, [self.s.x, self.s.y, RECT_SIZE, RECT_SIZE]))
-        self.food_x, self.food_y = choose_new_apple()
+        self.food_x, self.food_y = choose_new_apple(self.s)
         self.steps = 0
         self.game_number += 1
         self.did_collide = False
@@ -56,7 +58,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
 
     def _step(self, action):
 
-        if self.steps > 200 or self.did_collide:
+        if self.steps > self.tot_steps or self.did_collide:
             return self.reset()
 
         move = action
@@ -66,7 +68,6 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
                 x_step = 0
                 y_step = -STEP
                 self.s.change_direction(UP)
-
             else:
                 x_step = 0
                 y_step = STEP
@@ -75,7 +76,6 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
                 x_step = 0
                 y_step = STEP
                 self.s.change_direction(DOWN)
-
             else:
                 x_step = 0
                 y_step = -STEP
@@ -114,7 +114,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
                 self.high_score = self.score
             self.steps = 0
             got_food = True
-            self.food_x, self.food_y = choose_new_apple()
+            self.food_x, self.food_y = choose_new_apple(self.s)
             self.s.insert_segment(
                 Rectangle(self.display, black, [self.s.x - x_step, self.s.y - y_step, RECT_SIZE, RECT_SIZE]))
 
@@ -126,18 +126,27 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
 
         pygame.draw.rect(self.display, red, [self.food_x, self.food_y, RECT_SIZE, RECT_SIZE])
         self.display.blit(self.font.render(f'Score {self.score}, High Score {self.high_score},'
-                                           f' Generation {self.game_number}, Step {self.steps}/200', True, black), (0, 0))
+                                           f' Generation {self.game_number}, '
+                                           f'Step {self.steps}/{self.tot_steps}', True, black), (0, 0))
         pygame.display.update()
         obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
         self.steps += 1
-        time.sleep(0.05)
+        #time.sleep(0.1)
         return ts.transition(np.array(obs, dtype=np.int32), 100 if got_food else -0.1, 0)
 
 
-def choose_new_apple() -> (int, int):
+def choose_new_apple(snake: Snake) -> (int, int):
     """
-    Gets a tuple of numbers between height and width to the nearest multiple 5 of
+    Gets a tuple of numbers between height and width to the nearest multiple of {BASE}
     :return:
     """
-    return BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE), \
-           BASE * round(random.randint(0, HEIGHT - RECT_SIZE)) / BASE
+    while True:
+        x = BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE)
+        y = BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE)
+        is_good = True
+        for segment in snake.segments:
+            if segment.rect[0] - RECT_SIZE < x < segment.rect[0] + RECT_SIZE and segment.rect[1] - RECT_SIZE < y < segment.rect[1] + RECT_SIZE:
+                is_good = False
+                break
+        if is_good:
+            return x, y

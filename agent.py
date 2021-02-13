@@ -108,28 +108,27 @@ class SnakeAgent:
         # danger -> up 1 block
         # danger -> down 1 block
         left_d, right_d, up_d, down_d = self.check_potential_collision_with_self(snake)
-        if snake.x - STEP < 0 or left_d:
+        if snake.x <= 0 or left_d:
             state.append(1)
         else:
             state.append(0)
 
-        if snake.x + STEP > snake.max_x or right_d:
+        if snake.x + STEP >= snake.max_x or right_d:
             state.append(1)
         else:
             state.append(0)
 
         # 0 is at the top, HEIGHT is at the bottom, so if snake y is 50 - STEP < 0, then wall is above
-        if snake.y - STEP < 0 or up_d:
+        if snake.y - STEP <= 0 or up_d:
             state.append(1)
         else:
             state.append(0)
 
         # danger of hitting a wall
-        if snake.y + STEP > snake.max_y or down_d:
+        if snake.y + STEP >= snake.max_y or down_d:
             state.append(1)
         else:
             state.append(0)
-
 
         return state
 
@@ -138,6 +137,8 @@ class SnakeAgent:
         Checks to see if the snake will have a collision
         with itself within the next time step
         """
+
+        direction = snake.direction()
         left_d, right_d, up_d, down_d = False, False, False, False
         for i, segment in enumerate(snake.segments):
             # forget the first segment, is the head
@@ -161,6 +162,7 @@ class SnakeAgent:
         for i, segment in enumerate(snake.segments):
             if i == 0:
                 continue
+            # up
             if snake.y - STEP == segment.rect[1]:
                 up_d = True
                 break
@@ -170,8 +172,20 @@ class SnakeAgent:
             # forget the first segment, is the head
             if i == 0:
                 continue
+
+            # down
             if snake.y + STEP == segment.rect[1]:
                 down_d = True
+
+        if direction == LEFT:
+            right_d = False
+        elif direction == RIGHT:
+            left_d = False
+        elif direction == UP:
+            down_d = False
+        elif direction == DOWN:
+            up_d = False
+
         return left_d, right_d, up_d, down_d
 
 
