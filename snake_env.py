@@ -32,6 +32,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.display = display
         self.font = font
         self.steps = 0
+        self.game_number = 0
 
     def action_spec(self):
         return self._action_spec
@@ -45,13 +46,14 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.s.segments.insert(0, Rectangle(self.display, black, [self.s.x, self.s.y, RECT_SIZE, RECT_SIZE]))
         self.food_x, self.food_y = choose_new_apple()
         self.steps = 0
+        self.game_number += 1
         obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
 
         return ts.restart(np.array(obs, dtype=np.int32))
 
     def _step(self, action):
 
-        if self.steps > 200:
+        if self.steps > 50:
             obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
             return ts.termination(np.array(obs, dtype=np.int32), -10)
 
@@ -79,8 +81,9 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.s.y += y_step
 
         if self.s.is_collision():
-            #print(f'S collided with wall, resetting')
-            return self.reset()
+            obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
+            return ts.termination(np.array(obs, dtype=np.int32), -100)
+            #return self.reset()
 
         got_food = False
 
@@ -99,14 +102,11 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
             pygame.draw.rect(seg.display, black, [seg.rect[0], seg.rect[1], RECT_SIZE, RECT_SIZE])
 
         pygame.draw.rect(self.display, red, [self.food_x, self.food_y, RECT_SIZE, RECT_SIZE])
-        self.display.blit(self.font.render(f'Score {self.score}', True, black), (0, 0))
+        self.display.blit(self.font.render(f'Score {self.score}, game number {self.game_number}', True, black), (0, 0))
         pygame.display.update()
         obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
-        #time.sleep(0.5)
         self.steps += 1
-        #print(f'Went through step with step number {self.steps}, with observation {obs}')
-        #time.sleep(0.025)
-        return ts.transition(np.array(obs, dtype=np.int32), 10 if got_food else -1, 1)
+        return ts.transition(np.array(obs, dtype=np.int32), 100 if got_food else -0.1, 0)
 
 
 def choose_new_apple() -> (int, int):

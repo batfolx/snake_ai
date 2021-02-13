@@ -136,13 +136,13 @@ def setup():
     # snake_agent = SnakeAgent()
     # game(display, snake_agent)
 
-    env = SnakeGameEnv(display, font)
-    #env = CardGameEnv()
+    train_env = SnakeGameEnv(display, font)
+    # env = CardGameEnv()
     # utils.validate_py_environment(env)
     fc_layer_params = (100, 50)
-    action_tensor_spec = tensor_spec.from_spec(env.action_spec())
+    action_tensor_spec = tensor_spec.from_spec(train_env.action_spec())
     num_actions = action_tensor_spec.maximum - action_tensor_spec.minimum + 1
-    env = tf_py_environment.TFPyEnvironment(env)
+    train_env = tf_py_environment.TFPyEnvironment(train_env)
 
     # QNetwork consists of a sequence of Dense layers followed by a dense layer
     # with `num_actions` units to generate one q_value per available action as
@@ -158,42 +158,41 @@ def setup():
     optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3)
     train_step_counter = tf.Variable(0)
     agent = dqn_agent.DqnAgent(
-        env.time_step_spec(),
-        env.action_spec(),
+        train_env.time_step_spec(),
+        train_env.action_spec(),
         q_network=q_net,
         optimizer=optimizer,
         td_errors_loss_fn=common.element_wise_squared_loss,
         train_step_counter=train_step_counter)
     agent.initialize()
-    eval_policy = agent.policy
-    collect_policy = agent.collect_policy
     print('Initialized Agent')
-    random_policy = random_tf_policy.RandomTFPolicy(env.time_step_spec(),
-                                                    env.action_spec())
-    time_step = env.reset()
+    random_policy = random_tf_policy.RandomTFPolicy(train_env.time_step_spec(),
+                                                    train_env.action_spec())
 
+    print('Reset time spec')
+    time_step = train_env.reset()
     random_policy.action(time_step)
+    print('Successfully instantiated random policy')
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
         data_spec=agent.collect_data_spec,
-        batch_size=env.batch_size,
+        batch_size=train_env.batch_size,
         max_length=REPLAY_BUFFER_MAX_LEN)
 
-    print('Collecting data')
-    collect_data(env, random_policy, replay_buffer, INITIAL_COLLECT_STEPS)
+    print('Created replay buffer, collecting data ... ')
+    collect_data(train_env, random_policy, replay_buffer, INITIAL_COLLECT_STEPS)
     dataset = replay_buffer.as_dataset(
         num_parallel_calls=3,
         sample_batch_size=BATCH_SIZE,
         num_steps=2).prefetch(3)
     print('Collecting data complete')
     iterator = iter(dataset)
-    print(iterator)
     # Reset the train step
     agent.train_step_counter.assign(0)
-    avg_return = compute_avg_return(env, agent.policy, NUM_EVAL_EPISODES)
+    avg_return = compute_avg_return(train_env, agent.policy, NUM_EVAL_EPISODES)
     returns = [avg_return]
     print('Beginning to train...')
     for i in range(NUM_ITERATIONS):
-        collect_data(env, agent.collect_policy, replay_buffer, COLLECT_STEPS_PER_ITERATION)
+        collect_data(train_env, agent.collect_policy, replay_buffer, COLLECT_STEPS_PER_ITERATION)
 
         experience, unused_info = next(iterator)
         train_loss = agent.train(experience).loss
@@ -204,16 +203,23 @@ def setup():
             print('step = {0}: loss = {1}'.format(step, train_loss))
 
         if step % EVAL_INTERVAL == 0:
-            avg_return = compute_avg_return(env, agent.policy, NUM_EVAL_EPISODES)
+            avg_return = compute_avg_return(train_env, agent.policy, NUM_EVAL_EPISODES)
             print('step = {0}: Average Return = {1}'.format(step, avg_return))
             returns.append(avg_return)
 
+    iterations = range(0, NUM_ITERATIONS + 1, EVAL_INTERVAL)
+    plt.plot(iterations, returns)
+    plt.ylabel('Average Return')
+    plt.xlabel('Iterations')
+    plt.ylim(top=250)
+    plt.show()
 
 
 def compute_avg_return(environment, policy, num_episodes=10):
     total_return = 0.0
-    for _ in range(num_episodes):
 
+    for i in range(num_episodes):
+        print(f'On episode number {i}')
         time_step = environment.reset()
         episode_return = 0.0
 
@@ -221,6 +227,7 @@ def compute_avg_return(environment, policy, num_episodes=10):
             action_step = policy.action(time_step)
             time_step = environment.step(action_step.action)
             episode_return += time_step.reward
+            print(f'Episode number {i} with step reward {time_step.reward}, totaling reward {episode_return}')
         total_return += episode_return
 
     avg_return = total_return / num_episodes
@@ -254,6 +261,7 @@ def embed_mp4(filename):
 
     return IPython.display.HTML(tag)
 
+
 def create_policy_eval_video(policy, filename, env, num_episodes=5, fps=30):
     filename = filename + ".mp4"
     with imageio.get_writer(filename, fps=fps) as video:
@@ -265,7 +273,6 @@ def create_policy_eval_video(policy, filename, env, num_episodes=5, fps=30):
                 time_step = env.step(action_step.action)
                 video.append_data(env.render())
     return embed_mp4(filename)
-
 
 
 setup()
