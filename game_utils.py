@@ -54,7 +54,7 @@ class Snake:
         if self.x > (self.max_x - RECT_SIZE) or self.x < 0:
             return True
 
-        if self.y > self.max_y or self.y < 0 - RECT_SIZE:
+        if self.y > (self.max_y - RECT_SIZE) or self.y < 0:
             return True
 
         return False

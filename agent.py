@@ -14,20 +14,8 @@ from tf_agents.trajectories.time_step import time_step_spec
 
 class SnakeAgent:
     def __init__(self):
-
-        self.reward = 0
-        self.gamma = 0.9
-        self.agent_target = 1
-        self.agent_predict = 0
-        self.learning_rate = 0.1
         self.time_step_spec = None
 
-        # Adam optimizer, the opposite of an Eve optimizer.
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
-        self.agent = None
-
-    def set_dqn_agent(self, a):
-        self.agent = a
 
     def get_time_step(self):
         obs_spec = TensorSpec(shape=(12,),
@@ -115,32 +103,76 @@ class SnakeAgent:
         else:
             state.append(0)
 
-        # danger -> left 1 block
+        # danger -> left 1 block, whether it be itself or a block
         # danger -> right 1 block
         # danger -> up 1 block
         # danger -> down 1 block
-        if snake.x - STEP < 0:
+        left_d, right_d, up_d, down_d = self.check_potential_collision_with_self(snake)
+        if snake.x - STEP < 0 or left_d:
             state.append(1)
         else:
             state.append(0)
 
-        if snake.x + STEP > WIDTH:
+        if snake.x + STEP > snake.max_x or right_d:
             state.append(1)
         else:
             state.append(0)
 
         # 0 is at the top, HEIGHT is at the bottom, so if snake y is 50 - STEP < 0, then wall is above
-        if snake.y - STEP < 0:
+        if snake.y - STEP < 0 or up_d:
             state.append(1)
         else:
             state.append(0)
 
         # danger of hitting a wall
-        if snake.y + STEP > snake.max_y:
+        if snake.y + STEP > snake.max_y or down_d:
             state.append(1)
         else:
             state.append(0)
+
+
         return state
+
+    def check_potential_collision_with_self(self, snake: Snake) -> (bool, bool, bool, bool):
+        """
+        Checks to see if the snake will have a collision
+        with itself within the next time step
+        """
+        left_d, right_d, up_d, down_d = False, False, False, False
+        for i, segment in enumerate(snake.segments):
+            # forget the first segment, is the head
+            if i == 0:
+                continue
+
+            # if the snake moves to the left next time step, it will die
+            if snake.x - STEP == segment.rect[0]:
+                left_d = True
+                break
+
+        # check if right danger
+        for i, segment in enumerate(snake.segments):
+            if i == 0:
+                continue
+            if snake.x + STEP == segment.rect[0]:
+                right_d = True
+                break
+
+        # check if up danger
+        for i, segment in enumerate(snake.segments):
+            if i == 0:
+                continue
+            if snake.y - STEP == segment.rect[1]:
+                up_d = True
+                break
+
+        # check if down danger
+        for i, segment in enumerate(snake.segments):
+            # forget the first segment, is the head
+            if i == 0:
+                continue
+            if snake.y + STEP == segment.rect[1]:
+                down_d = True
+        return left_d, right_d, up_d, down_d
 
 
 def dense_layer(num_units):

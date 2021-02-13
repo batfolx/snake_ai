@@ -32,6 +32,7 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
         self.display = display
         self.font = font
         self.steps = 0
+        self.high_score = 0
         self.game_number = 0
         self.did_collide = False
 
@@ -55,26 +56,45 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
 
     def _step(self, action):
 
-        if self.steps > 50 or self.did_collide:
+        if self.steps > 200 or self.did_collide:
             return self.reset()
 
         move = action
+        curr_direction = self.s.direction()
         if move == UP:
-            x_step = 0
-            y_step = -STEP
-            self.s.change_direction(UP)
+            if curr_direction != DOWN:
+                x_step = 0
+                y_step = -STEP
+                self.s.change_direction(UP)
+
+            else:
+                x_step = 0
+                y_step = STEP
         elif move == DOWN:
-            x_step = 0
-            y_step = STEP
-            self.s.change_direction(DOWN)
+            if curr_direction != UP:
+                x_step = 0
+                y_step = STEP
+                self.s.change_direction(DOWN)
+
+            else:
+                x_step = 0
+                y_step = -STEP
         elif move == LEFT:
-            x_step = -STEP
-            y_step = 0
-            self.s.change_direction(LEFT)
+            if curr_direction != RIGHT:
+                x_step = -STEP
+                y_step = 0
+                self.s.change_direction(LEFT)
+            else:
+                x_step = STEP
+                y_step = 0
         elif move == RIGHT:
-            x_step = STEP
-            y_step = 0
-            self.s.change_direction(RIGHT)
+            if curr_direction != LEFT:
+                x_step = STEP
+                y_step = 0
+                self.s.change_direction(RIGHT)
+            else:
+                x_step = -STEP
+                y_step = 0
         else:
             raise ValueError("Action can only be 0-3 inclusive.")
 
@@ -90,6 +110,8 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
 
         if self.s.did_get_food(self.food_x, self.food_y):
             self.score += SCORE_STEP
+            if self.score > self.high_score:
+                self.high_score = self.score
             self.steps = 0
             got_food = True
             self.food_x, self.food_y = choose_new_apple()
@@ -103,10 +125,12 @@ class SnakeGameEnv(py_environment.PyEnvironment, ABC):
             pygame.draw.rect(seg.display, black, [seg.rect[0], seg.rect[1], RECT_SIZE, RECT_SIZE])
 
         pygame.draw.rect(self.display, red, [self.food_x, self.food_y, RECT_SIZE, RECT_SIZE])
-        self.display.blit(self.font.render(f'Score {self.score}, game number {self.game_number}', True, black), (0, 0))
+        self.display.blit(self.font.render(f'Score {self.score}, High Score {self.high_score},'
+                                           f' Generation {self.game_number}, Step {self.steps}/200', True, black), (0, 0))
         pygame.display.update()
         obs = self.snake_agent.get_observation(self.s, self.food_x, self.food_y)
         self.steps += 1
+        time.sleep(0.05)
         return ts.transition(np.array(obs, dtype=np.int32), 100 if got_food else -0.1, 0)
 
 
@@ -117,47 +141,3 @@ def choose_new_apple() -> (int, int):
     """
     return BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE), \
            BASE * round(random.randint(0, HEIGHT - RECT_SIZE)) / BASE
-
-class CardGameEnv(py_environment.PyEnvironment):
-
-  def __init__(self):
-    self._action_spec = array_spec.BoundedArraySpec(
-        shape=(), dtype=np.int32, minimum=0, maximum=1, name='action')
-    self._observation_spec = array_spec.BoundedArraySpec(
-        shape=(1,), dtype=np.int32, minimum=0, name='observation')
-    self._state = 0
-    self._episode_ended = False
-
-  def action_spec(self):
-    return self._action_spec
-
-  def observation_spec(self):
-    return self._observation_spec
-
-  def _reset(self):
-    self._state = 0
-    self._episode_ended = False
-    return ts.restart(np.array([self._state], dtype=np.int32))
-
-  def _step(self, action):
-
-    if self._episode_ended:
-      # The last action ended the episode. Ignore the current action and start
-      # a new episode.
-      return self.reset()
-
-    # Make sure episodes don't go on forever.
-    if action == 1:
-      self._episode_ended = True
-    elif action == 0:
-      new_card = np.random.randint(1, 11)
-      self._state += new_card
-    else:
-      raise ValueError('`action` should be 0 or 1.')
-
-    if self._episode_ended or self._state >= 21:
-      reward = self._state - 21 if self._state <= 21 else -21
-      return ts.termination(np.array([self._state], dtype=np.int32), reward)
-    else:
-      return ts.transition(
-          np.array([self._state], dtype=np.int32), reward=0.0, discount=1.0)

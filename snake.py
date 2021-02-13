@@ -24,7 +24,7 @@ from tf_agents.environments import tf_py_environment
 import numpy as np
 from tf_agents.environments import utils
 import matplotlib.pyplot as plt
-from snake_env import SnakeGameEnv, CardGameEnv
+from snake_env import SnakeGameEnv
 import IPython
 import base64
 import imageio
@@ -103,7 +103,7 @@ def game_step(display,
 
     if s.did_get_food(apple_x, apple_y):
         score += SCORE_STEP
-        apple_x, apple_y = choose_new_apple()
+        apple_x, apple_y = choose_new_apple(s)
         s.insert_segment(Rectangle(display, black, [s.x - x_step, s.y - y_step, RECT_SIZE, RECT_SIZE]))
 
     display.fill(white)
@@ -119,13 +119,22 @@ def game_step(display,
     return True
 
 
-def choose_new_apple() -> (int, int):
+def choose_new_apple(snake: Snake) -> (int, int):
     """
-    Gets a tuple of numbers between height and width to the nearest multiple 5 of
+    Gets a tuple of numbers between height and width to the nearest multiple of {BASE}
     :return:
     """
-    return BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE), \
-           BASE * round(random.randint(0, HEIGHT - RECT_SIZE)) / BASE
+    while True:
+        x = BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE)
+        y = BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE)
+        is_good = True
+        for segment in snake.segments:
+            if segment.rect[0] - RECT_SIZE < x < segment.rect[0] + RECT_SIZE and segment.rect[1] - RECT_SIZE < y < segment.rect[1] + RECT_SIZE:
+                is_good = False
+                break
+        if is_good:
+            return x, y
+
 
 
 def setup():
