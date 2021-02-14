@@ -17,7 +17,7 @@ A program to teach an AI to play Snake using Deep Reinforcement Learning.
 
 
 
-I used a DNQAgent from Tensorflow's <a href="https://www.tensorflow.org/agents"/>Agents</a> to train this AI in a custom environment that I built.
+I used a DQNAgent from Tensorflow's <a href="https://www.tensorflow.org/agents"/>Agents</a> to train this AI in a custom environment that I built.
 
 
 
