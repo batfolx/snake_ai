@@ -2,14 +2,15 @@
 A program to teach an AI to play Snake using Deep Reinforcement Learning.
 
 <div style="display: block;">
-  
-  <p style="font-size:32px;">Before being trained for ~5 minutes. It doesn't know what it's doing, really.</p>
-  <img src="gifs/before_training.gif" alt="before_training.gif" >
+  <div>
+    <p style="font-size:32px;">Before being trained for ~5 minutes. It doesn't know what it's doing, really.</p>
+    <img src="gifs/before_training.gif" alt="before_training.gif" >
+   </div>
 
   <div>
-    After being trained for ~5 minutes. Big difference!
+    <p>After being trained for ~5 minutes. Big difference!</p>
     <img src="gifs/trained.gif" alt="trained.gif">
- </div>
+  </div>
 
 </div>
 
