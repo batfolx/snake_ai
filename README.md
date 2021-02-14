@@ -1,17 +1,18 @@
 # snake_ai
 A program to teach an AI to play Snake using Deep Reinforcement Learning.
 
-<div style="display: inline-block;">
+<div style="display: block;">
+  
   <p style="font-size:32px;">Before being trained for ~5 minutes. It doesn't know what it's doing, really.</p>
   <img src="gifs/before_training.gif" alt="before_training.gif" >
 
 </div>
-<br>
 
-<p>
+
+<div>
   After being trained for ~5 minutes. Big difference!
   <img src="gifs/trained.gif" alt="trained.gif">
- </p>
+ </div>
 
 
 I used a DNQAgent from Tensorflow's <a href="https://www.tensorflow.org/agents"/>Agents</a> to train this AI in a custom environment that I built.
