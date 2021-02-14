@@ -1,33 +1,18 @@
+import time
 import pygame
-
-from constants import *
-from parameters import *
-from game_utils import Rectangle, Snake
-import random
-from agent import SnakeAgent, dense_layer
 import tensorflow as tf
 from tf_agents.agents.dqn import dqn_agent
-from tf_agents.specs import tensor_spec
-import time
-from tf_agents.utils import common
+from tf_agents.environments import tf_py_environment
 from tf_agents.networks import sequential
 from tf_agents.policies import random_tf_policy
-from tf_agents.agents.ppo.ppo_agent import PPOAgent
-from tf_agents.networks.actor_distribution_network import ActorDistributionNetwork
-from tf_agents.agents.reinforce import reinforce_agent
-from tf_agents.networks import actor_distribution_network
-from tf_agents.agents.categorical_dqn import categorical_dqn_agent
-from tf_agents.networks import categorical_q_network
-from tf_agents.trajectories import trajectory
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
-from tf_agents.environments import tf_py_environment
-import numpy as np
-from tf_agents.environments import utils
-import matplotlib.pyplot as plt
-from snake_env import SnakeGameEnv
-import IPython
-import base64
-import imageio
+from tf_agents.specs import tensor_spec
+from tf_agents.utils import common
+
+from agent import SnakeAgent, dense_layer
+from constants import *
+from game_utils import Rectangle, Snake
+from snake_env import (SnakeGameEnv, choose_new_apple, compute_avg_return, collect_data)
 
 
 def game(display):
@@ -151,23 +136,6 @@ def game_step(display,
     return True, apple_x, apple_y
 
 
-def choose_new_apple(snake: Snake) -> (int, int):
-    """
-    Gets a tuple of numbers between height and width to the nearest multiple of {BASE}
-    :return:
-    """
-    while True:
-        x = BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE)
-        y = BASE * round(random.randint(0, (WIDTH - RECT_SIZE)) / BASE)
-        is_good = True
-        for segment in snake.segments:
-            if segment.rect[0] - RECT_SIZE < x < segment.rect[0] + RECT_SIZE and segment.rect[1] - RECT_SIZE < y < segment.rect[1] + RECT_SIZE:
-                is_good = False
-                break
-        if is_good:
-            return x, y
-
-
 def ai_game():
     pygame.init()
     display = pygame.display.set_mode((HEIGHT, WIDTH))
@@ -175,6 +143,7 @@ def ai_game():
     font = pygame.font.SysFont("Times New Roman", 24)
     # snake_agent = SnakeAgent()
     # game(display, snake_agent)
+    time.sleep(5)
 
     train_env = SnakeGameEnv(display, font)
     eval_env = SnakeGameEnv(display, font)
@@ -239,18 +208,20 @@ def ai_game():
         experience, unused_info = next(iterator)
         train_loss = agent.train(experience).loss
         step = agent.train_step_counter.numpy()
-        print(train_env.time_step_spec())
+        #print(train_env.time_step_spec())
 
-        #print(f"Training agent through iteration {(i / NUM_ITERATIONS) * 100:.2f}%...")
+        print(f"Training agent through iteration {(i / NUM_ITERATIONS) * 100:.2f}%...")
         if step % LOG_INTERVAL == 0:
             pass
             #print('step = {0}: loss = {1}'.format(step, train_loss))
 
         if step % EVAL_INTERVAL == 0:
-            avg_return = compute_avg_return(train_env, agent.policy, NUM_EVAL_EPISODES)
+            #avg_return = compute_avg_return(train_env, agent.policy, NUM_EVAL_EPISODES)
             #print('step = {0}: Average Return = {1}'.format(step, avg_return))
-            returns.append(avg_return)
+            #returns.append(avg_return)
+            pass
 
+    """
     pygame.quit()
     iterations = range(0, NUM_ITERATIONS + 1, EVAL_INTERVAL)
     plt.plot(iterations, returns)
@@ -259,66 +230,9 @@ def ai_game():
     plt.ylim(top=250)
     plt.savefig("test.png")
     plt.show()
+    """
 
 
-def compute_avg_return(environment, policy, num_episodes=10):
-    total_return = 0.0
-
-    for i in range(num_episodes):
-        print(f'On episode number {i}')
-        time_step = environment.reset()
-        episode_return = 0.0
-
-        while not time_step.is_last():
-            action_step = policy.action(time_step)
-            time_step = environment.step(action_step.action)
-            episode_return += time_step.reward
-            print(f'{time_step}')
-        total_return += episode_return
-
-    avg_return = total_return / num_episodes
-    return avg_return.numpy()[0]
-
-
-def collect_step(environment, policy, buffer):
-    time_step = environment.current_time_step()
-    action_step = policy.action(time_step)
-    next_time_step = environment.step(action_step.action)
-    traj = trajectory.from_transition(time_step, action_step, next_time_step)
-
-    # Add trajectory to the replay buffer
-    buffer.add_batch(traj)
-
-
-def collect_data(env, policy, buffer, steps):
-    for _ in range(steps):
-        collect_step(env, policy, buffer)
-
-
-def embed_mp4(filename):
-    """Embeds an mp4 file in the notebook."""
-    video = open(filename, 'rb').read()
-    b64 = base64.b64encode(video)
-    tag = '''
-  <video width="640" height="480" controls>
-    <source src="data:video/mp4;base64,{0}" type="video/mp4">
-  Your browser does not support the video tag.
-  </video>'''.format(b64.decode())
-
-    return IPython.display.HTML(tag)
-
-
-def create_policy_eval_video(policy, filename, env, num_episodes=5, fps=30):
-    filename = filename + ".mp4"
-    with imageio.get_writer(filename, fps=fps) as video:
-        for _ in range(num_episodes):
-            time_step = env.reset()
-            video.append_data(env.render())
-            while not time_step.is_last():
-                action_step = policy.action(time_step)
-                time_step = env.step(action_step.action)
-                video.append_data(env.render())
-    return embed_mp4(filename)
 
 
 def manual_game():

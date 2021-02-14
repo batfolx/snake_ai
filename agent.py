@@ -1,46 +1,11 @@
-import numpy as np
 from game_utils import Snake
 from constants import *
-from parameters import *
 import tensorflow as tf
-from tf_agents.environments import py_environment
-from tf_agents.environments import tf_environment
-from tf_agents.environments import tf_py_environment
-from tf_agents.networks import q_network
-from tf_agents.trajectories.time_step import TimeStep, StepType
-from tf_agents.specs import ArraySpec, BoundedArraySpec, TensorSpec, BoundedTensorSpec
-from tf_agents.trajectories.time_step import time_step_spec
 
 
 class SnakeAgent:
     def __init__(self):
         self.time_step_spec = None
-
-
-    def get_time_step(self):
-        obs_spec = TensorSpec(shape=(12,),
-                              dtype=np.int32,
-                              name="observation",
-
-                              )
-
-        # scalar float value
-        reward_spec = TensorSpec((1,), np.dtype('float32'), 'reward')
-
-        # scalar integer with 4 possible values (up, down, left, right)
-        action_spec = BoundedTensorSpec((1,), np.dtype('int32'), minimum=0, maximum=3, name='action')
-        #timestep = TimeStep(step_type=step_type, observation=obs_spec, reward=reward_spec, discount=0)
-        timestep = time_step_spec(obs_spec)
-        self.time_step_spec = timestep
-        print('Observation spec:')
-        print(obs_spec)
-        print('Reward spec:')
-        print(reward_spec)
-        print('Action Spec:')
-        print(action_spec)
-        print("Time step:")
-        print(timestep)
-        return timestep, action_spec
 
     def get_observation(self, snake: Snake, food_x, food_y):
         """
@@ -145,38 +110,24 @@ class SnakeAgent:
             if i == 0:
                 continue
 
-            # if the snake moves to the left next time step, it will die
-            if snake.x - STEP == segment.rect[0]:
+            # # check to see if the snake will collide with left of itself
+            if snake.x - STEP == segment.rect[0] and segment.rect[1] == snake.y:
                 left_d = True
-                break
 
-        # check if right danger
-        for i, segment in enumerate(snake.segments):
-            if i == 0:
-                continue
-            if snake.x + STEP == segment.rect[0]:
+            # check to see if the snake will collide with right of itself
+            if snake.x + STEP == segment.rect[0] and segment.rect[1] == snake.y:
                 right_d = True
-                break
 
-        # check if up danger
-        for i, segment in enumerate(snake.segments):
-            if i == 0:
-                continue
-            # up
-            if snake.y - STEP == segment.rect[1]:
+            # check to see if the snake will collide with itself above itself
+            if snake.y - STEP == segment.rect[1] and segment.rect[0] == snake.x:
                 up_d = True
-                break
 
-        # check if down danger
-        for i, segment in enumerate(snake.segments):
-            # forget the first segment, is the head
-            if i == 0:
-                continue
-
-            # down
-            if snake.y + STEP == segment.rect[1]:
+            # check to see if the snake will collide with itself below itself
+            if snake.y + STEP == segment.rect[1] and segment.rect[0] == snake.x:
                 down_d = True
 
+        # this lets the snake know that it has no danger
+        # behind itself
         if direction == LEFT:
             right_d = False
         elif direction == RIGHT:
@@ -190,6 +141,9 @@ class SnakeAgent:
 
 
 def dense_layer(num_units):
+    """
+    Meant for adding layers for the neural network
+    """
     return tf.keras.layers.Dense(
         num_units,
         activation=tf.keras.activations.relu,
