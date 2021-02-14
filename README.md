@@ -9,9 +9,10 @@ A program to teach an AI to play Snake using Deep Reinforcement Learning.
 </p>
 
 
-
-<li>After being trained for ~5 minutes. Big difference!</li>
-<img src="gifs/trained.gif" alt="trained.gif">
+<p>
+  After being trained for ~5 minutes. Big difference!
+  <img src="gifs/trained.gif" alt="trained.gif">
+ </p>
 
 
 I used a DNQAgent from Tensorflow's <a href="https://www.tensorflow.org/agents"/>Agents</a> to train this AI in a custom environment that I built.
