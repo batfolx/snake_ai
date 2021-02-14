@@ -1,8 +1,14 @@
 # snake_ai
 A program to teach an AI to play Snake using Deep Reinforcement Learning.
 
-<li>Before being trained for ~5 minutes. It doesn't know what it's doing, really.</li>
-<img src="gifs/before_training.gif" alt="before_training.gif">
+<p>
+  
+  Before being trained for ~5 minutes. It doesn't know what it's doing, really.
+  <img src="gifs/before_training.gif" alt="before_training.gif" >
+
+</p>
+
+
 
 <li>After being trained for ~5 minutes. Big difference!</li>
 <img src="gifs/trained.gif" alt="trained.gif">
